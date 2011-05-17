@@ -56,13 +56,7 @@ module Ripeline
       @stats_hash_key = "#{@name}_stats"
       #a list of valid stats keys - to be used in a hash whose key is self.stats_hash_key. use these keys 
       @valid_stats_keys = [:stage_success, :stage_failure]
-      
-      if options.has_key? :parallel and options[:parallel].boolean?
-        @parallel = options[:parallel]
-      else
-        @parallel = true
-      end
-      
+            
       if options.has_key? :queue_wait_seconds and options[:queue_wait_seconds].class == Fixnum
         @queue_wait_seconds = options[:queue_wait_seconds]
       else
