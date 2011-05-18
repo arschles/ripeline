@@ -1,10 +1,7 @@
 def do_requires
-  require "#{File.dirname(__FILE__)}/../bootstrap"
   require 'redis'
   require 'json'
   require 'uuid'
-  require 'object_additions'
-  require 'hash_additions'
   require 'redis-namespace'
   require 'stats_mixin'
   require 'exception_mixin'
@@ -85,7 +82,8 @@ module Ripeline
     def start options = {}
       @finalized = false
       self.stage_initialize
-      max_iterations = options.get_default :max_iterations, :infinity, :type_required => :Fixnum
+      max_iterations = :infinity
+      max_iterations = options[:max_iterations] if options.has_key? :max_iterations and options[:max_iterations].class == Fixnum
       
       raise "stages with no pull queue must be run infinitely. specify :max_iterations => :infinity to do this" if (max_iterations != :infinity and self.pull_queue_names.length == 0)
       

@@ -2,8 +2,6 @@ def do_requires
   require 'redis'
   require 'json'
   require 'uuid'
-  require "#{File.dirname(__FILE__)}/../bootstrap"
-  require 'object_additions'
   require 'redis-namespace'
 end
 
