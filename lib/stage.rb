@@ -18,7 +18,7 @@ rescue LoadError
 end
 
 module Ripeline
-  
+    
   class Stage
     include Ripeline::Stats
     include Ripeline::Exception
@@ -26,7 +26,7 @@ module Ripeline
     STAGES_SET_KEY = :active_stages
     
     attr_reader :pipeline_id, :identifier, :name, :pull_queue_names, :push_queue_names, :parallelizable, :stats_hash_key, :queue_wait_seconds, :valid_stats_keys, :finalized
-        
+    
     def initialize pull_queue_names, push_queue_names, options = {}
       pull_queue_names = [] if pull_queue_names == nil
       push_queue_names = [] if push_queue_names == nil
@@ -124,6 +124,7 @@ module Ripeline
     
     #process an individual run
     def process_run ret
+      return if ret == nil
       vals = [vals] if vals.class != Array
       vals.each do |val|
         self.push_queue_push val

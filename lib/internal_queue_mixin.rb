@@ -1,3 +1,10 @@
+begin
+  require 'json'
+rescue LoadError
+  require 'rubygems'
+  require 'json'
+end
+
 module Ripeline
   module StageInternalQueue
     
