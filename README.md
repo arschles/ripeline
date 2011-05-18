@@ -9,7 +9,7 @@ A story I shall tell you
 
 I was building a Github crawler to download a bunch of code, and after I hacked something together I basically had built an ad-hoc pipeline. The crawler was split up into stages (roughly: find user, parse github user page, find repos, download code), and each stage was a producer, a consumer, or a producer and a consumer, and I was using redis queues to communicate between stages. It looked like this:
 
-    find users ----redis queue ----> parse user page and find repos <---- redis queue ----> download code --------> mongo collection
+    find users <----<redis queue>----> parse user page and find repos <----<redis queue>----> download code --------> mongo collection
 
 My hacked up version worked... until it didn't and started sucking to maintain. I was repeating code everywhere to get stuff out of a queue, do some stuff, put the result in a queue, and loop forever. Also, testing all this code meant firing up a redis instance and then firing up each stage in a separate process, and looking at each process to determine where errors came (and oh, did they ever come!) Often, when I found a backtrace, the pipeline stage was already dead and repro-ing it would take another whole run. Do not pass go, do not collect $200.
 
