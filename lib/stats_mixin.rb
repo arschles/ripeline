@@ -23,14 +23,9 @@ module Ripeline
     protected
     
     def stat_count key
-      raise "invalid stats key #{key}" if not self.valid_stats_keys.include? key
       @redis.hincrby self.stats_hash_key, key, 1
     end
-    
-    def add_valid_stats_key key
-      @valid_stats_keys.push key if not @valid_stats_keys.include? key
-    end
-  
+      
   end
   
 end

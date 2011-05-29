@@ -1,6 +1,5 @@
 def do_requires
   require 'redis'
-  require 'json'
   require 'uuid'
   require 'redis-namespace'
   require "#{File.dirname(__FILE__)}/stats_mixin"
@@ -23,7 +22,7 @@ module Ripeline
     
     STAGES_SET_KEY = :active_stages
     
-    attr_reader :pipeline_id, :identifier, :name, :pull_queue_names, :push_queue_names, :parallelizable, :stats_hash_key, :queue_wait_seconds, :valid_stats_keys, :finalized
+    attr_reader :pipeline_id, :identifier, :name, :pull_queue_names, :push_queue_names, :parallelizable, :stats_hash_key, :queue_wait_seconds, :finalized
     
     def initialize pull_queue_names, push_queue_names, options = {}
       
@@ -41,11 +40,11 @@ module Ripeline
       @finalized = false
       
       pull_queue_names.each do |pull_queue_name|
-        @pull_queue_names.push "pull_queue_#{pull_queue_name}"
+        @pull_queue_names.push pull_queue_name
       end
       
       push_queue_names.each do |push_queue_name|
-        @push_queue_names.push "push_queue_#{push_queue_name}"
+        @push_queue_names.push push_queue_name
       end
       
       @redis = Redis.new
@@ -55,19 +54,13 @@ module Ripeline
       @name = self.class.name
       @identifier = {:name => self.name, :pipeline_id => self.pipeline_id}
       @stats_hash_key = "#{@name}_stats"
-      #a list of valid stats keys - to be used in a hash whose key is self.stats_hash_key. use these keys 
-      @valid_stats_keys = [:stage_success, :stage_failure]
             
       if options.has_key? :queue_wait_seconds and options[:queue_wait_seconds].class == Fixnum
         @queue_wait_seconds = options[:queue_wait_seconds]
       else
         @queue_wait_seconds = 5
       end
-      
-      self.valid_stats_keys.each do |stats_key|
-        @redis.hsetnx self.stats_hash_key, stats_key, 0
-      end
-      
+            
     end
   
     #override these in your subclass
@@ -91,28 +84,36 @@ module Ripeline
       
       begin
         
-        @redis.sadd STAGES_SET_KEY, self.identifier.to_json
+        @redis.sadd STAGES_SET_KEY, self.identifier
         
-        puts "starting the #{self.name} stage (pull_queues = #{self.pull_queue_names.to_json}, push_queues = #{self.push_queue_names.to_json})"
         iteration_num = 0
         loop do
           elt = self.pull_queue_pull
           elt = {} if elt == nil
           begin
             vals = self.run elt
-            self.process_run vals
+            if vals != nil
+              vals = [vals] if vals.class != Array
+              vals.each do |val|
+                self.push_queue_push val if val != nil
+              end
+            else
+              self.stat_count :stage_nil_return
+            end
+            
             self.stat_count :stage_success
+            
           rescue Exception => e
             puts "EXCEPTION THROWN in #{self.name}: #{e}"
             self.stat_count :stage_failure
             self.record_exception e
           end
           iteration_num += 1
-          break if (max_iterations.class == Fixnum or max_iterations.class == Bignum) and iteration_num >= max_iterations
+          break if max_iterations != :infinity and iteration_num >= max_iterations
         end
       
       ensure
-        @redis.srem STAGES_SET_KEY, self.identifier.to_json
+        @redis.srem STAGES_SET_KEY, self.identifier
       end
       
       self.stage_finalize
@@ -121,33 +122,24 @@ module Ripeline
     end
     
     protected
-    
-    #process an individual run
-    def process_run ret
-      return if ret == nil
-      vals = [vals] if vals.class != Array
-      vals.each do |val|
-        self.push_queue_push val
-      end
-    end
-    
+        
     #pull an element from a random pull queue
     def pull_queue_pull
-      elt = nil
       return nil if self.pull_queue_names.length == 0
       
+      elt = nil
       elt = @redis.brpop(self.pull_queue_names, self.queue_wait_seconds) while elt == nil
       
       key = elt[0]
       val = elt[1]
-      JSON::parse(val)
+      val
     end
     
     #push an element to a random push queue
     def push_queue_push val
       return nil if self.push_queue_names.length == 0
       key = self.push_queue_names[rand(self.push_queue_names.length - 1)]
-      @redis.lpush key, val.to_json
+      @redis.lpush key, val
       key
     end
     

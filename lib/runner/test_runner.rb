@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 begin
   require 'redis'
 rescue LoadError
@@ -38,9 +40,9 @@ stages = stages.sort do |a, b|
   a_num <=> b_num
 end
 
-puts "starting redis"
-redis_proc = IO.popen "redis-server"
-$redis = Redis.new
+#puts "starting redis"
+#redis_proc = IO.popen "redis-server"
+#$redis = Redis.new
 
 stages.each_with_index do |stage, idx|
   #require the file
@@ -62,8 +64,7 @@ stages.each_with_index do |stage, idx|
   output_queue = "queue_#{idx+1}" if idx < (stages.length - 1)
   
   puts "running stage #{stage_no_rb} (#{class_name})"
-  #stage_inst = Object.const_get(class_name).new input_queue, output_queue
-  stage_inst = Object.const_get(class_name).new
+  stage_inst = Object.const_get(class_name).new input_queue, output_queue
   stage_inst.start :max_iterations => max_iterations
   
   puts "type 'next' to continue"
@@ -76,5 +77,5 @@ stages.each_with_index do |stage, idx|
   
 end
 
-$redis.flushdb
-Process.kill(9, redis_proc.pid)
+#$redis.flushdb
+#Process.kill(9, redis_proc.pid)

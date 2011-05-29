@@ -12,7 +12,6 @@ module Ripeline
       end
       
       def internal_queue_push name, val
-        puts "pushing #{val} onto queue #{self.internal_queue_name name}"
         @redis.lpush(self.internal_queue_name(name), val)
         true
       end
