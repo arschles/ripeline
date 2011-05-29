@@ -1,29 +1,19 @@
-begin
-  require 'json'
-rescue LoadError
-  require 'rubygems'
-  require 'json'
-end
-
 module Ripeline
-  module StageInternalHash
+  module StageMixins
+    module InternalHash
     
-    def internal_hash_set name, val
-      raise "key name must be a string" if name.class != String
+      def internal_hash_set name, val
+        @redis.hset((self.internal_hash_name name), val)
+      end
+    
+      def internal_hash_get hash_name, hash_key
+        @redis.hget(self.internal_hash_name(name), hash_key)
+      end
       
-      @redis.hset self.hash_name, name, val.to_json
+      def internal_hash_name name
+        return "#{self.class.name}-internal-hash:#{name}"
+      end
+    
     end
-    
-    def internal_hash_get name
-      raise "key name must be a string" if name.class != String
-      @redis.hget self.hash_name name
-    end
-    
-    private
-    
-    def hash_name name
-      return "#{self.class.name}-internal-hash:#{name}"
-    end
-    
   end
 end

@@ -2,9 +2,6 @@ def do_requires
   require 'redis'
   require 'json'
   require 'uuid'
-  require "#{File.dirname(__FILE__)}/../bootstrap"
-  require 'object_additions'
-  require 'array_additions'
   require 'redis-namespace'
 end
 
@@ -31,7 +28,7 @@ module Ripeline
     end
     
     def add_valid_stats_key key
-      @valid_stats_keys.push_non_existent key
+      @valid_stats_keys.push key if not @valid_stats_keys.include? key
     end
   
   end

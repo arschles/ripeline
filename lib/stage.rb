@@ -3,8 +3,9 @@ def do_requires
   require 'json'
   require 'uuid'
   require 'redis-namespace'
-  require 'stats_mixin'
-  require 'exception_mixin'
+  require "#{File.dirname(__FILE__)}/stats_mixin"
+  require "#{File.dirname(__FILE__)}/exception_mixin"
+  require "#{File.dirname(__FILE__)}/util"
 end
 
 begin
@@ -25,12 +26,15 @@ module Ripeline
     attr_reader :pipeline_id, :identifier, :name, :pull_queue_names, :push_queue_names, :parallelizable, :stats_hash_key, :queue_wait_seconds, :valid_stats_keys, :finalized
     
     def initialize pull_queue_names, push_queue_names, options = {}
+      
       pull_queue_names = [] if pull_queue_names == nil
       push_queue_names = [] if push_queue_names == nil
-      raise "pull_queue_names must be an Array or a String" if not (pull_queue_names.class == Array or pull_queue_names.class == String)
-      raise "push_queue_names must be an Array or a String" if not (push_queue_names.class == Array or push_queue_names.class == String)
-      pull_queue_names = [pull_queue_names] if pull_queue_names.class == String
-      push_queue_names = [push_queue_names] if push_queue_names.class == String
+      
+      pull_queue_names.require_type 'pull_queue_names', [Array, String, Symbol]
+      push_queue_names.require_type 'push_queue_names', [Array, String, Symbol]
+      
+      pull_queue_names = [pull_queue_names] if pull_queue_names.class != Array
+      push_queue_names = [push_queue_names] if push_queue_names.class != Array
       
       @pull_queue_names = []
       @push_queue_names = []
@@ -84,8 +88,6 @@ module Ripeline
       self.stage_initialize
       max_iterations = :infinity
       max_iterations = options[:max_iterations] if options.has_key? :max_iterations and options[:max_iterations].class == Fixnum
-      
-      raise "stages with no pull queue must be run infinitely. specify :max_iterations => :infinity to do this" if (max_iterations != :infinity and self.pull_queue_names.length == 0)
       
       begin
         
@@ -150,5 +152,5 @@ module Ripeline
     end
     
   end
-  
+    
 end
