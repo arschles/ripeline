@@ -2,19 +2,42 @@
 
 begin
   require 'redis'
+  require 'optparse'
 rescue LoadError
   require 'rubygems'
   require 'redis'
 end
 
-if ARGV.length < 1
+dir = nil
+max_iterations = 1
+stage_num = nil
+
+optparse = OptionParser.new do |opts|
+  opts.on('-h', '--help', 'Display this screen') do
+    puts opts
+    exit
+  end
+  
+  opts.on('-d', '--dir', 'the directory that holds all the pipeline stages') do |directory|
+    dir = directory
+  end
+  
+  opts.on('-m', '--max_iterations', 'the maximum iterations to run each stage with') do |maxiterations|
+    max_iterations = maxiterations
+  end
+  
+  #todo:implement this
+  #opts.on('-s', '--stage', 'the individual stage number to run') do |stagenum|
+  #  stage_num = stagenum
+  #end
+  
+end
+
+
+if dir == nil
   $stderr.puts "must specify directory that holds ripeline stages"
   exit(1)
 end
-
-dir = ARGV[0]
-max_iterations = 1
-max_iterations = ARGV[1].to_i if (ARGV.length > 1) and (ARGV[1].to_i > 0)
 
 if not File.directory? dir
   $stderr.puts "given directory #{dir} doesn't exist"
@@ -64,7 +87,7 @@ stages.each_with_index do |stage, idx|
   output_queue = "queue_#{idx+1}" if idx < (stages.length - 1)
   
   puts "running stage #{stage_no_rb} (#{class_name})"
-  stage_inst = Object.const_get(class_name).new input_queue, output_queue
+  stage_inst = Object.const_get(class_name).new(input_queue, output_queue)
   stage_inst.start :max_iterations => max_iterations
   
   puts "type 'next' to continue"
