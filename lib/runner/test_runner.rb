@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 
 def do_requires
-  require 'redis'
   require 'optparse'
   require "#{File.dirname(__FILE__)}/stage_description"
 end
@@ -50,34 +49,7 @@ rescue OptionParser::ParseError
 end
 
 raise "must specify --directory" if not options.has_key? :directory
-
-if not File.directory? options[:directory]
-  $stderr.puts "given directory #{options[:directory]} doesn't exist"
-  exit(1)
-end
-
-old_dir = Dir.getwd
-puts "chdir to #{options[:directory]}"
-Dir.chdir(options[:directory])
-stages = Dir.glob('[0-9]*.rb')
-puts "got stages #{stages.join ', '}"
-Dir.chdir(old_dir)
-puts "chdir to #{old_dir}"
-
-$:.push options[:directory]
-
-stages = stages.sort do |a, b|
-  a_split = a.split '_'
-  b_split = b.split '_'
-  a_num = a_split[0].to_i
-  b_num = b_split[0].to_i
-  
-  a_num <=> b_num
-end
-
-#puts "starting redis"
-#redis_proc = IO.popen "redis-server"
-#$redis = Redis.new
+stages = Ripeline::Runner::StageDescription.for_dir options[:directory], :debug => true
 
 if options.has_key? :stage_num
   stage_numbers = options[:stage_num].split ','
@@ -90,10 +62,10 @@ if options.has_key? :stage_num
   stages = new_stages
 end
 
-puts "running stages #{stages.join ', '}"
+puts "running #{stages.length} stages"
 
 stages.each_with_index do |stage, idx|
-  Ripeline::Runner::StageDescription.new(stage, idx, stages.length, :debug => true).create_instance do |instance|
+  stage.create_instance do |instance|
     puts "running #{instance.class.name}"
     instance.start :max_iterations => options[:max_iterations]
     puts "completed #{instance.class.name} (#{idx})"
@@ -106,6 +78,3 @@ stages.each_with_index do |stage, idx|
   end
   
 end
-
-#$redis.flushdb
-#Process.kill(9, redis_proc.pid)

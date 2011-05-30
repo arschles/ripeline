@@ -4,6 +4,33 @@ module Ripeline
       
       attr_reader :stage_filename, :stage_num, :num_total_stages, :debug
       
+      #get the stage descriptions for a given directory, sorted by stage name
+      def self.for_dir dir, options = {:debug => false}
+        raise "#{dir} doesn't exist" if not File.directory? dir
+        old_dir = Dir.getwd
+        Dir.chdir(dir)
+        stages = Dir.glob('[0-9]*.rb')
+        Dir.chdir(old_dir)
+        
+        $:.push dir
+        
+        stages = stages.sort do |a, b|
+          a_split = a.split '_'
+          b_split = b.split '_'
+          a_num = a_split[0].to_i
+          b_num = b_split[0].to_i
+          
+          a_num <=> b_num
+        end
+        
+        ret = []
+        stages.each_with_index do |stage, idx|
+          ret.push self.new stage, idx, stage.length, options
+        end
+        ret
+      end
+        
+      
       def initialize stage_filename, stage_num, num_total_stages, options = {:debug => false}
         @stage_filename = stage_filename
         @stage_num = stage_num
