@@ -2,6 +2,7 @@ def do_requires
   require 'redis'
   require 'json'
   require 'uuid'
+  require 'mongo'
   require 'redis-namespace'
 end
 
@@ -16,13 +17,12 @@ module Ripeline
   
   module Exception
     
-    @@mongo_Exceptions_coll = nil
+    @@mongo_exceptions_coll = nil
+    
     protected
     
     def record_exception e
-      
-      raise "e must be an exception" if not e.is_a? Exception
-      
+      return
       if @@mongo_exceptions_coll == nil
         mongo_conn = Mongo::Connection.new
         mongo_db = mongo_conn[:octodoc]
