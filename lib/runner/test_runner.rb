@@ -3,6 +3,7 @@
 def do_requires
   require 'redis'
   require 'optparse'
+  require "#{File.dirname(__FILE__)}/stage_description"
 end
 
 begin
@@ -12,34 +13,43 @@ rescue LoadError
   do_requires
 end
 
-options = {}
+options = {
+  :max_iterations => 1,
+  :autorun => false
+}
 
-OptionParser.new do |opts|
+option_parser = OptionParser.new do |opts|
   opts.on('-h', '--help', 'Display this screen') do
     puts opts
     exit
   end
   
-  opts.on('--dir DIR', String, 'the directory that holds all the pipeline stages') do |directory|
-    options[:directory] = directory
+  opts.on('-d DIRECTORY', '--directory DIRECTORY', 'the directory that holds all the pipeline stages - required') do |directory|
+    options[:directory] = directory.to_s
   end
   
-  opts.on('--max_iterations MAX_ITERATIONS', Integer, 'the maximum iterations to run each stage with') do |max_iterations|
+  opts.on('-m MAX_ITERATIONS', '--max_iterations MAX_ITERATIONS', 'the maximum iterations to run each stage with') do |max_iterations|
     options[:max_iterations] = max_iterations
   end
   
-  #todo:implement this
-  #opts.on('-s', '--stage', 'the individual stage number to run') do |stagenum|
-  #  stage_num = stagenum
-  #end
+  opts.on('-s STAGE_NUM', '--stage STAGE_NUM', 'the individual stage number to run (starting with 0)') do |stagenum|
+    options[:stage_num] = stagenum
+  end
   
-end.parse!
-
-
-if options[:directory] == nil
-  $stderr.puts "must specify directory that holds ripeline stages"
-  exit(1)
+  opts.on('-a', '--autorun', 'run all desired stages without requiring you to type next after each stage') do |autorun|
+    options[:autorun] = true
+  end
+  
 end
+
+begin
+  option_parser.parse!(ARGV)
+rescue OptionParser::ParseError
+  $stderr.print "Error: " + $! + "\n"
+  exit
+end
+
+raise "must specify --directory" if not options.has_key? :directory
 
 if not File.directory? options[:directory]
   $stderr.puts "given directory #{options[:directory]} doesn't exist"
@@ -69,35 +79,30 @@ end
 #redis_proc = IO.popen "redis-server"
 #$redis = Redis.new
 
+if options.has_key? :stage_num
+  stage_numbers = options[:stage_num].split ','
+  new_stages = []
+  stage_numbers.each do |stage_number|
+    stage_number = stage_number.to_i
+    raise "invalid stage number #{stage_number}" if stage_number < 0 or stage_number >= stages.length
+    new_stages.push stages[stage_number]
+  end
+  stages = new_stages
+end
+
+puts "running stages #{stages.join ', '}"
+
 stages.each_with_index do |stage, idx|
-  #require the file
-  stage_split = stage.split '.'
-  stage_no_rb = stage_split[Range.new(0, stage_split.length-2)].join
-  
-  #get the class name
-  split_by_underscore = stage_no_rb.split('_')
-  split_by_underscore = split_by_underscore[Range.new(1, split_by_underscore.length-1)]
-  class_name = ""
-  split_by_underscore.each do |piece|
-    class_name << piece.capitalize
+  Ripeline::Runner::StageDescription.new(stage, idx, stages.length, :debug => true).create_instance do |instance|
+    puts "running #{instance.class.name}"
+    instance.start :max_iterations => options[:max_iterations]
+    puts "completed #{instance.class.name} (#{idx})"
   end
   
-  require stage_no_rb
-  input_queue = nil
-  output_queue = nil
-  input_queue = "queue_#{idx}" if idx > 0
-  output_queue = "queue_#{idx+1}" if idx < (stages.length - 1)
-  
-  puts "running stage #{stage_no_rb} (#{class_name})"
-  stage_inst = Object.const_get(class_name).new(input_queue, output_queue)
-  stage_inst.start :max_iterations => options[:max_iterations]
-  
-  puts "type 'next' to continue"
-  input = $stdin.gets.chomp
-  if input == 'next'
-    next
-  else
+  input = nil
+  while input != 'next' and idx < (stages.length - 1) and options[:autorun] = false
     puts "type 'next' to continue"
+    input = $stdin.gets.chomp
   end
   
 end

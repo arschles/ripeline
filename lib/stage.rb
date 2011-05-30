@@ -2,6 +2,7 @@ def do_requires
   require 'redis'
   require 'uuid'
   require 'redis-namespace'
+  require 'open-uri'
   require "#{File.dirname(__FILE__)}/stats_mixin"
   require "#{File.dirname(__FILE__)}/exception_mixin"
   require "#{File.dirname(__FILE__)}/util"
@@ -22,9 +23,11 @@ module Ripeline
     
     STAGES_SET_KEY = :active_stages
     
-    attr_reader :pipeline_id, :identifier, :name, :pull_queue_names, :push_queue_names, :parallelizable, :stats_hash_key, :queue_wait_seconds, :finalized
+    attr_reader :pipeline_id, :identifier, :name, :pull_queue_names, :push_queue_names, :parallelizable, :stats_hash_key, :queue_wait_seconds, :finalized, :debug
     
-    def initialize pull_queue_names, push_queue_names, options = {}
+    def initialize pull_queue_names, push_queue_names, options = {:debug => false}
+      
+      @debug = true if options[:debug] == true
       
       pull_queue_names = [] if pull_queue_names == nil
       push_queue_names = [] if push_queue_names == nil
@@ -124,24 +127,32 @@ module Ripeline
     end
     
     protected
-        
+    
+    def debug_out s
+      puts "[debug] #{s}" if self.debug
+    end
+    
     #pull an element from a random pull queue
     def pull_queue_pull
       return nil if self.pull_queue_names.length == 0
+      
+      puts "pulling from queues #{self.pull_queue_names.join ', '}"
       
       elt = nil
       elt = @redis.brpop(self.pull_queue_names, self.queue_wait_seconds) while elt == nil
       
       key = elt[0]
       val = elt[1]
-      val
+      self.debug_out "got data from pull queue #{key}"
+      Marshal.load val
     end
     
     #push an element to a random push queue
     def push_queue_push val
       return nil if self.push_queue_names.length == 0
       key = self.push_queue_names[rand(self.push_queue_names.length - 1)]
-      @redis.lpush key, val
+      self.debug_out "pushing data onto push queue #{key}"
+      @redis.lpush key, Marshal.dump(val)
       key
     end
     
