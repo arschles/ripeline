@@ -103,13 +103,15 @@ module Ripeline
             
             self.stat_count :stage_success
             
-          rescue Exception => e
+            iteration_num += 1
+            break if max_iterations != :infinity and iteration_num >= max_iterations
+            
+          rescue Exception, OpenURI::HTTPError => e
             puts "EXCEPTION THROWN in #{self.name}: #{e}"
             self.stat_count :stage_failure
             self.record_exception e
           end
-          iteration_num += 1
-          break if max_iterations != :infinity and iteration_num >= max_iterations
+          
         end
       
       ensure
