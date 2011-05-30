@@ -1,29 +1,31 @@
 #!/usr/bin/env ruby
 
-begin
+def do_requires
   require 'redis'
   require 'optparse'
-rescue LoadError
-  require 'rubygems'
-  require 'redis'
 end
 
-dir = nil
-max_iterations = 1
-stage_num = nil
+begin
+  do_requires
+rescue LoadError
+  require 'rubygems'
+  do_requires
+end
 
-optparse = OptionParser.new do |opts|
+options = {}
+
+OptionParser.new do |opts|
   opts.on('-h', '--help', 'Display this screen') do
     puts opts
     exit
   end
   
-  opts.on('-d', '--dir', 'the directory that holds all the pipeline stages') do |directory|
-    dir = directory
+  opts.on('--dir DIR', String, 'the directory that holds all the pipeline stages') do |directory|
+    options[:directory] = directory
   end
   
-  opts.on('-m', '--max_iterations', 'the maximum iterations to run each stage with') do |maxiterations|
-    max_iterations = maxiterations
+  opts.on('--max_iterations MAX_ITERATIONS', Integer, 'the maximum iterations to run each stage with') do |max_iterations|
+    options[:max_iterations] = max_iterations
   end
   
   #todo:implement this
@@ -31,28 +33,28 @@ optparse = OptionParser.new do |opts|
   #  stage_num = stagenum
   #end
   
-end
+end.parse!
 
 
-if dir == nil
+if options[:directory] == nil
   $stderr.puts "must specify directory that holds ripeline stages"
   exit(1)
 end
 
-if not File.directory? dir
-  $stderr.puts "given directory #{dir} doesn't exist"
+if not File.directory? options[:directory]
+  $stderr.puts "given directory #{options[:directory]} doesn't exist"
   exit(1)
 end
 
 old_dir = Dir.getwd
-puts "chdir to #{dir}"
-Dir.chdir(dir)
+puts "chdir to #{options[:directory]}"
+Dir.chdir(options[:directory])
 stages = Dir.glob('[0-9]*.rb')
 puts "got stages #{stages.join ', '}"
 Dir.chdir(old_dir)
 puts "chdir to #{old_dir}"
 
-$:.push dir
+$:.push options[:directory]
 
 stages = stages.sort do |a, b|
   a_split = a.split '_'
@@ -88,7 +90,7 @@ stages.each_with_index do |stage, idx|
   
   puts "running stage #{stage_no_rb} (#{class_name})"
   stage_inst = Object.const_get(class_name).new(input_queue, output_queue)
-  stage_inst.start :max_iterations => max_iterations
+  stage_inst.start :max_iterations => options[:max_iterations]
   
   puts "type 'next' to continue"
   input = $stdin.gets.chomp
