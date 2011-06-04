@@ -1,16 +1,18 @@
 #!/usr/bin/env ruby
 
-def do_requires
-  require 'optparse'
-  require "#{File.dirname(__FILE__)}/stage_description"
-end
+#runs each pipeline stage in sequence. no separate processes per stage, no concurrency.
+#TODO: use a mock redis here
 
-begin
-  do_requires
-rescue LoadError
-  require 'rubygems'
-  do_requires
+def do_requires
+  begin
+    require 'optparse'
+    require "stage_description"
+  rescue LoadError
+    require 'rubygems'
+    do_requires
+  end
 end
+do_requires
 
 options = {
   :max_iterations => 1,

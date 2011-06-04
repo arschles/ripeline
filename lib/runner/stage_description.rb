@@ -2,7 +2,7 @@ module Ripeline
   module Runner
     class StageDescription
       
-      attr_reader :stage_filename, :stage_num, :num_total_stages, :debug
+      attr_reader :stage_filename, :stage_num, :num_total_stages, :debug, :class_name, :stage_filename_no_rb
       
       #get the stage descriptions for a given directory, sorted by stage name
       def self.for_dir dir, options = {:debug => false}
@@ -36,22 +36,21 @@ module Ripeline
         @stage_num = stage_num
         @num_total_stages = num_total_stages
         @debug  = options[:debug]
+        
+        stage_split = self.stage_filename.split '.'
+        stage_no_rb = stage_split[Range.new(0, stage_split.length-2)].join
+        @stage_filename_no_rb = stage_no_rb
+        
+        split_by_underscore = stage_no_rb.split('_')
+        split_by_underscore = split_by_underscore[Range.new(1, split_by_underscore.length-1)]
+        @class_name = ""
+        split_by_underscore.each do |piece|
+          @class_name << piece.capitalize
+        end
       end
       
       def get_class
-        #require the file
-        stage_split = self.stage_filename.split '.'
-        stage_no_rb = stage_split[Range.new(0, stage_split.length-2)].join
-
-        #get the class name
-        split_by_underscore = stage_no_rb.split('_')
-        split_by_underscore = split_by_underscore[Range.new(1, split_by_underscore.length-1)]
-        class_name = ""
-        split_by_underscore.each do |piece|
-          class_name << piece.capitalize
-        end
-
-        require stage_no_rb
+        require @stage_filename_no_rb
         Object.const_get class_name
       end
       
