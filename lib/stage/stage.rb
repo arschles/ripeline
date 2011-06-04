@@ -1,25 +1,23 @@
-def do_requires
-  require 'redis'
-  require 'uuid'
-  require 'redis-namespace'
-  require 'open-uri'
-  require "stats_mixin"
-  require "exception_mixin"
-  require "util"
-end
-do_requires
+$:.push "#{File.dirname(__FILE__)}/../"
+require 'redis'
+require 'uuid'
+require 'redis-namespace'
+require 'open-uri'
+require "stats_mixin"
+require "exception_mixin"
+require "util"
 
 module Ripeline
     
   class Stage
-    include Ripeline::Stats
-    include Ripeline::Exception
+    include Ripeline::StageMixins::Stats
+    include Ripeline::StageMixins::Exception
     
     STAGES_SET_KEY = :active_stages
     
     attr_reader :pipeline_id, :identifier, :name, :pull_queue_names, :push_queue_names, :parallelizable, :stats_hash_key, :queue_wait_seconds, :finalized, :debug
     
-    def initialize pull_queue_names, push_queue_names, options = {:debug => false}
+    def initialize pull_queue_names, push_queue_names, options = {:debug => false, :redis_host => "localhost", :redis_port => 6379}
       
       @debug = true if options[:debug] == true
       
@@ -44,8 +42,13 @@ module Ripeline
         @push_queue_names.push push_queue_name
       end
       
-      @redis = Redis.new
+      @redis = Redis.new(:host=>options[:redis_host], :port=>options[:redis_port])
       @redis = Redis::Namespace.new(:Ripeline, :redis => @redis)
+      begin
+        @redis.info #to ensure we have a connection
+      rescue
+        raise "could not connect to redis"
+      end
       
       @pipeline_id = UUID.new.generate
       @name = self.class.name
@@ -101,7 +104,6 @@ module Ripeline
             break if options[:max_iterations] != :infinity and iteration_num >= options[:max_iterations]
             
           rescue Exception, OpenURI::HTTPError => e
-            puts "EXCEPTION THROWN in #{self.name}: #{e}"
             self.stat_count :stage_failure
             self.record_exception e
           end
@@ -118,6 +120,10 @@ module Ripeline
     end
     
     protected
+    
+    def record_exception e
+      puts "EXCEPTION THROWN in #{self.name}: #{e}"
+    end
     
     def debug_out s
       puts "[debug] #{s}" if self.debug
