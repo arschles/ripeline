@@ -1,5 +1,12 @@
-require 'rubygems'
-require 'json'
+def do_requires
+  begin
+    require 'json'
+  rescue LoadError
+    require 'rubygems'
+    do_requires
+  end
+end
+do_requires
 
 module Ripeline
   module StageTest

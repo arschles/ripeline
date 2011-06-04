@@ -3,17 +3,11 @@ def do_requires
   require 'uuid'
   require 'redis-namespace'
   require 'open-uri'
-  require "#{File.dirname(__FILE__)}/stats_mixin"
-  require "#{File.dirname(__FILE__)}/exception_mixin"
-  require "#{File.dirname(__FILE__)}/util"
+  require "stats_mixin"
+  require "exception_mixin"
+  require "util"
 end
-
-begin
-  do_requires
-rescue LoadError
-  require 'rubygems'
-  do_requires
-end
+do_requires
 
 module Ripeline
     
@@ -79,14 +73,11 @@ module Ripeline
     
     #####
     
-    def start options = {}
+    def start options = {:max_iterations => :infinity}
       @finalized = false
       self.stage_initialize
-      max_iterations = :infinity
-      max_iterations = options[:max_iterations] if options.has_key? :max_iterations and options[:max_iterations].class == Fixnum
       
-      begin
-        
+      begin        
         @redis.sadd STAGES_SET_KEY, self.identifier
         
         iteration_num = 0
@@ -107,7 +98,7 @@ module Ripeline
             self.stat_count :stage_success
             
             iteration_num += 1
-            break if max_iterations != :infinity and iteration_num >= max_iterations
+            break if options[:max_iterations] != :infinity and iteration_num >= options[:max_iterations]
             
           rescue Exception, OpenURI::HTTPError => e
             puts "EXCEPTION THROWN in #{self.name}: #{e}"

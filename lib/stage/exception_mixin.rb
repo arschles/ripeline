@@ -1,22 +1,19 @@
 def do_requires
-  require 'redis'
-  require 'json'
-  require 'uuid'
-  require 'mongo'
-  require 'redis-namespace'
+  begin
+    require 'redis'
+    require 'json'
+    require 'uuid'
+    require 'mongo'
+    require 'redis-namespace'
+  rescue LoadError
+    require 'rubygems'
+    do_requires
+  end
 end
-
-begin
-  do_requires
-rescue LoadError
-  require 'rubygems'
-  do_requires
-end
+do_requires
 
 module Ripeline
-  
   module Exception
-    
     @@mongo_exceptions_coll = nil
     
     protected

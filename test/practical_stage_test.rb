@@ -1,6 +1,7 @@
 require 'rubygems'
+$:.push "#{File.dirname(__FILE__)}/../lib/stage"
 require 'test/unit'
-require "#{File.dirname(__FILE__)}/../stage"
+require 'stage'
 require 'stage_test_mixin'
 require 'json'
 

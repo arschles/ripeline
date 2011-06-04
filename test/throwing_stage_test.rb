@@ -1,6 +1,7 @@
 require 'rubygems'
 require 'test/unit'
-require "#{File.dirname(__FILE__)}/../stage"
+$:.push "#{File.dirname(__FILE__)}/../lib/stage"
+require "stage"
 require 'stage_test_mixin'
 
 class ThrowingFakeStageSubclass < Ripeline::Stage
