@@ -5,8 +5,8 @@ require 'stage'
 require 'stage_test_mixin'
 require 'json'
 
-TEST_PULL_QUEUE_PAYLOAD = {:test => true, :queue_type => "pull"}
-TEST_PUSH_QUEUE_PAYLOAD = {:test => true, :queue_type => "push"}
+TEST_PULL_QUEUE_PAYLOAD = Marshal.dump({:test => true, :queue_type => "pull"})
+TEST_PUSH_QUEUE_PAYLOAD = Marshal.dump({:test => true, :queue_type => "push"})
 
 class RealWorldSubclass < Ripeline::Stage
   def run arg
@@ -16,7 +16,7 @@ end
 
 module Ripeline
   class Stage
-    include Ripeline::StageTest
+    include Ripeline::StageMixins::Test
   end
 end
 

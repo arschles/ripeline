@@ -12,7 +12,7 @@ end
 
 module Ripeline
   class Stage
-    include Ripeline::StageTest
+    include Ripeline::StageMixins::Test
   end
 end
 
