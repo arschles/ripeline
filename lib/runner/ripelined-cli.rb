@@ -1,16 +1,9 @@
 #!/usr/bin/env ruby
-def do_requires
-  begin
-    require 'optparse'
-    require 'highline/import'
-    require 'msgpack/rpc'
-    require 'pp'
-  rescue LoadError
-    require 'rubygems'
-    do_requires
-  end
-end
-do_requires
+require 'rubygems'
+require 'optparse'
+require 'highline/import'
+require 'msgpack/rpc'
+require 'pp'
 
 options = {
   :host => 'localhost',

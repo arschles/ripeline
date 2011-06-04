@@ -1,17 +1,9 @@
 #!/usr/bin/env ruby
 #this is a daemon that runs on each node, and it exposes an RPC interface for controlling ripeline processes running on this node
-
-def do_requires
-  begin
-    require 'msgpack/rpc'
-    require 'stage_description'
-    require 'optparse'
-  rescue LoadError
-    require 'rubygems'
-    do_requires
-  end
-end
-do_requires
+require 'rubygems'
+require 'msgpack/rpc'
+require "#{File.dirname(__FILE__)}/stage_description"
+require 'optparse'
 
 options = {
   :stages_dir => "#{File.dirname(__FILE__)}/stages/",
