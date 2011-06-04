@@ -13,23 +13,24 @@ end
 do_requires
 
 module Ripeline
-  module Exception
-    @@mongo_exceptions_coll = nil
+  module StageMixins
+    module Exception
+      @@mongo_exceptions_coll = nil
     
-    protected
+      protected
     
-    def record_exception e
-      return
-      if @@mongo_exceptions_coll == nil
-        mongo_conn = Mongo::Connection.new
-        mongo_db = mongo_conn[:octodoc]
-        @@mongo_exceptions_coll = monbo_db["#{self.name}-exceptions"]
+      def record_exception e
+        return
+        if @@mongo_exceptions_coll == nil
+          mongo_conn = Mongo::Connection.new
+          mongo_db = mongo_conn[:octodoc]
+          @@mongo_exceptions_coll = monbo_db["#{self.name}-exceptions"]
+        end
+      
+        @@mongo_exceptions_coll.insert :from => self.pipeline_identifier, :exception_message => e.message, :exception_backtrace => e.backtrace
+      
       end
-      
-      @@mongo_exceptions_coll.insert :from => self.pipeline_identifier, :exception_message => e.message, :exception_backtrace => e.backtrace
-      
+  
     end
-  
   end
-  
 end
