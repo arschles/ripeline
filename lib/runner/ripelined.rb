@@ -50,58 +50,7 @@ class RipelinedHandler
   
   def start_stage stage_name, options = {}
     self.dout "start_stage(#{stage_name})"
-    stage_name.downcase!
-    start_stage_impl stage_name, options
-  end
-  
-  def running_stages
-    self.dout "running_stages"
-    ret = []
-    @running.each do |pid, stage|
-        ret.push [pid, stage.class_name]
-    end
-    ret
-  end
-  
-  def loaded_stages
-    self.dout "loaded_stages"
-    @stages.map {|stage| stage[0]}
-  end
-  
-  def stop_stage pid
-    self.dout "stop_stage(#{pid})"
-    stop_stage_impl pid
-  end
-  
-  def start_all_stages
-    self.dout "start_all_stages"
-    started = []
-    @stages.each do |stage_name|
-      started.push(start_stage_impl stage_name)
-    end
-    started
-  end
-  
-  def stop_all_stages
-    self.dout "stop_all_stages"
-    killed = []
-    @running.each do |pid, stage|
-      killed.push(stop_stage_impl(pid))
-    end
-    killed
-  end
-  
-  def all_commands
-    self.class.public_instance_methods false
-  end
-  
-  protected
-  
-  def dout s
-    puts s if self.debug
-  end
-  
-  def start_stage_impl stage_name, options = {}
+    stage_name = stage_name.downcase
     raise "no known stage #{stage_name}" if not self.stages.has_key? stage_name
     
     devnull = File.new('/dev/null', 'w')
@@ -121,18 +70,82 @@ class RipelinedHandler
     
     @running[pid] = @stages[stage_name]
     
-    pid
+    [stage_name, pid]
   end
   
-  def stop_stage_impl pid
-    pid = pid.to_i
-    raise "#{pid} is not running" if not @running.has_key? pid
-    Process.kill "HUP", pid
-    stage_name = @running[pid].class_name
-    @running.delete pid
-    return [stage_name, pid]
+  def start_all_stages
+    self.dout "start_all_stages"
+    started = []
+    @stages.each do |stage_info|
+      stage_name = stage_info[0]
+      self.disable_debug do
+        started.push(start_stage stage_name)
+      end
+    end
+    started
   end
   
+  def stop_stage pid
+    self.dout "stop_stage(#{pid})"
+      pid = pid.to_i
+      raise "#{pid} is not running" if not @running.has_key? pid
+      Process.kill "HUP", pid
+      stage_name = @running[pid].class_name
+      @running.delete pid
+      return [stage_name, pid]
+  end
+    
+  def stop_all_stages
+    self.dout "stop_all_stages"
+    killed = []
+    @running.each do |pid, stage|
+      self.disable_debug do
+        killed.push(stop_stage(pid))
+      end
+    end
+    killed
+  end
+  
+  
+  def running_stages
+    self.dout "running_stages"
+    ret = []
+    @running.each do |pid, stage|
+        ret.push [pid, stage.class_name]
+    end
+    ret
+  end
+  
+  def loaded_stages
+    self.dout "loaded_stages"
+    @stages.map {|stage| stage[0]}
+  end
+    
+  def commands
+    self.class.public_instance_methods false
+  end
+  
+  def kill_server
+    self.dout "kill_server"
+    self.disable_debug do
+      stop_all_stages
+    end
+    exit(0)
+  end
+  
+  protected
+  
+  def disable_debug &block
+    old_dbg = @debug
+    @debug = false
+    block.call
+    @debug = old_dbg
+  end
+  
+  def dout s
+    puts s if self.debug
+  end
+    
 end
 
 svr = MessagePack::RPC::Server.new
