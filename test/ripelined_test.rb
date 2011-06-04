@@ -1,5 +1,4 @@
 require 'rubygems'
-$:.push "../"
 require 'test/unit'
 require 'msgpack/rpc'
 
